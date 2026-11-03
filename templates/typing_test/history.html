@@ -1,0 +1,365 @@
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Performance Dashboard | TypeMaster</title>
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<nav class="navbar">
+    <div class="nav-container">
+
+        <a href="/" class="logo">
+            <span class="logo-icon">T</span>
+            TypeMaster<span class="dot">.</span>
+        </a>
+
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/#test">Typing Test</a>
+            <a href="{% url 'history' %}">Dashboard</a>
+        </div>
+
+        <a href="/#test" class="nav-button">Start Test ↗</a>
+
+    </div>
+</nav>
+
+
+<main class="dashboard-page">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="dashboard-message">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <section class="dashboard-heading">
+
+        <span class="section-tag">YOUR PERFORMANCE</span>
+
+        <h1>Performance <span>Dashboard.</span></h1>
+
+        <p>
+            Track your typing progress and analyze your performance.
+        </p>
+
+    </section>
+
+
+    <!-- STATISTICS -->
+
+    <section class="dashboard-stats">
+
+        <div class="dashboard-card">
+            <span>TOTAL TESTS</span>
+            <strong>{{ total_tests }}</strong>
+            <small>Tests completed</small>
+        </div>
+
+        <div class="dashboard-card">
+            <span>AVERAGE WPM</span>
+            <strong>{{ average_wpm }}</strong>
+            <small>Words per minute</small>
+        </div>
+
+        <div class="dashboard-card">
+            <span>BEST WPM</span>
+            <strong>{{ best_wpm }}</strong>
+            <small>Your highest speed</small>
+        </div>
+
+        <div class="dashboard-card">
+            <span>AVERAGE ACCURACY</span>
+            <strong>{{ average_accuracy }}%</strong>
+            <small>Typing accuracy</small>
+        </div>
+
+    </section>
+
+
+    <!-- PERFORMANCE GRAPH -->
+
+    <section class="dashboard-chart">
+
+        <div class="chart-heading">
+            <div>
+                <h2>Typing Performance</h2>
+                <p>Your WPM across recent tests</p>
+            </div>
+
+            <span class="chart-label">WPM ANALYTICS</span>
+        </div>
+
+        {% if total_tests > 0 %}
+
+            <div class="chart-wrapper">
+                <canvas id="performanceChart"></canvas>
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                <div class="empty-icon">⌨</div>
+                <h3>No Performance Data Yet</h3>
+                <p>Complete your first typing test to see your graph.</p>
+                <a href="/#test" class="primary-button">
+                    Start Your First Test →
+                </a>
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- HISTORY TABLE -->
+
+    <section class="history-section">
+
+        
+        <div class="history-heading">
+
+            <div>
+                <h2>Test History</h2>
+                <p>Your latest 20 typing test records</p>
+            </div>
+
+            <div class="history-actions">
+
+                <span class="history-count">
+                    {{ total_tests }} Total Tests
+                </span>
+
+                {% if request.user.is_staff and total_tests > 0 %}
+
+                <form method="POST"
+                    action="{% url 'clear_all_history' %}"
+                    onsubmit="return confirm('WARNING: Are you sure you want to permanently delete ALL typing test records? This action cannot be undone.');">
+
+                    {% csrf_token %}
+
+                    <button type="submit" class="delete-all-btn">
+                        🗑 Clear All History
+                    </button>
+
+                </form>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+
+
+        {% if results %}
+
+        <div class="table-wrapper">
+
+            <table class="history-table">
+
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>DATE & TIME</th>
+                        <th>WPM</th>
+                        <th>ACCURACY</th>
+                        <th>DIFFICULTY</th>
+                        <th>DURATION</th>
+                        <th>ACTION</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for result in results %}
+
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+
+                        <td>
+                            {{ result.created_at|date:"d M Y, h:i A" }}
+                        </td>
+
+                        <td class="table-wpm">
+                            {{ result.wpm }}
+                        </td>
+
+                        <td>
+                            {{ result.accuracy }}%
+                        </td>
+
+                        <td>
+                            <span class="difficulty-badge {{ result.difficulty }}">
+                                {{ result.get_difficulty_display }}
+                            </span>
+                        </td>
+
+                        <td>{{ result.duration }} min</td>
+
+                        <td>
+
+                            {% if request.user.is_staff %}
+
+                            <form method="POST"
+                                action="{% url 'delete_result' result.id %}"
+                                onsubmit="return confirm('Delete this test result?');">
+
+                                {% csrf_token %}
+
+                                <button type="submit" class="delete-btn">
+                                    Delete
+                                </button>
+
+                            </form>
+
+                            {% else %}
+
+                            <span>—</span>
+
+                            {% endif %}
+
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-state">
+            <h3>No Test History Found</h3>
+            <p>Your completed tests will appear here.</p>
+        </div>
+
+        {% endif %}
+
+    </section>
+
+</main>
+
+
+<footer>
+    <a href="/" class="logo">
+        <span class="logo-icon">T</span>
+        TypeMaster<span class="dot">.</span>
+    </a>
+
+    <p>Practice. Improve. Master your typing.</p>
+
+    <small>© 2026 TypeMaster. All rights reserved.</small>
+</footer>
+
+
+{% if total_tests > 0 %}
+
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_wpm|json_script:"chart-wpm" }}
+
+<script>
+
+const labels = JSON.parse(
+    document.getElementById("chart-labels").textContent
+);
+
+const wpmData = JSON.parse(
+    document.getElementById("chart-wpm").textContent
+);
+
+const ctx = document.getElementById("performanceChart");
+
+new Chart(ctx, {
+
+    type: "line",
+
+    data: {
+
+        labels: labels,
+
+        datasets: [{
+            label: "Typing Speed (WPM)",
+
+            data: wpmData,
+
+            borderColor: "#8b5cf6",
+
+            backgroundColor: "rgba(139, 92, 246, 0.12)",
+
+            borderWidth: 3,
+
+            fill: true,
+
+            tension: 0.35,
+
+            pointRadius: 5,
+
+            pointBackgroundColor: "#38bdf8"
+        }]
+
+    },
+
+    options: {
+
+        responsive: true,
+
+        maintainAspectRatio: false,
+
+        plugins: {
+            legend: {
+                labels: {
+                    color: "#cbd5e1"
+                }
+            }
+        },
+
+        scales: {
+
+            x: {
+                ticks: {
+                    color: "#94a3b8"
+                },
+                grid: {
+                    color: "rgba(255,255,255,0.05)"
+                }
+            },
+
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: "#94a3b8"
+                },
+                grid: {
+                    color: "rgba(255,255,255,0.05)"
+                }
+            }
+
+        }
+
+    }
+
+});
+
+</script>
+
+{% endif %}
+
+</body>
+</html>
